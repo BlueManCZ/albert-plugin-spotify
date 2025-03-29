@@ -1,16 +1,16 @@
-# Spotify extension
+# Spotify plugin
 
-The Spotify extension for Albert launcher allows you to search
+The Spotify plugin for Albert launcher allows you to search
 tracks on Spotify and play them immediately or add them to the
 queue. It also allows you to choose the Spotify client, where
 to play the track.
 
-The extension uses the Spotify Web API.
+The plugin uses the Spotify Web API.
 
 For the proper
-functionality of extension, **Spotify premium is required**.
+functionality of plugin, **Spotify premium is required**.
 
-![Spotify extension](https://i.imgur.com/CoE2C5i.png)
+![Spotify plugin](https://i.imgur.com/CoE2C5i.png)
 
 ## Web API connection
 
@@ -21,7 +21,7 @@ in with your Spotify account.
 
 Click on the button **Create an app**
 and fill the form. You can use for example name "Albert" and
-description "Spotify extension for Albert launcher".
+description "Spotify plugin for Albert launcher".
 
 Once you
 click on **Create**, your new application window will appear. You
