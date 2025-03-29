@@ -1,0 +1,7 @@
+{
+  "authors": ["@BlueManCZ"],
+  "description": "Albert plugin leveraging the Spotify API to allow users to search for and play tracks.",
+  "license": "MIT",
+  "name": "Spotify",
+  "url": "https://github.com/BlueManCZ/albert-plugin-spotify"
+}
