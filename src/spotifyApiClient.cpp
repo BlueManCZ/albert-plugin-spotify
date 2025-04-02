@@ -14,13 +14,32 @@
 using namespace albert;
 using namespace std;
 
+inline QString TOKEN_URL = "https://accounts.spotify.com/api/token";
+inline QString SEARCH_URL = "https://api.spotify.com/v1/search?q=%1&type=%2&limit=%3";
+inline QString DEVICES_URL = "https://api.spotify.com/v1/me/player/devices";
+inline QString QUEUE_URL = "https://api.spotify.com/v1/me/player/queue?uri=%1";
+inline QString PLAY_URL = "https://api.spotify.com/v1/me/player/play?device_id=%1";
+inline int DEFAULT_TIMEOUT = 10000;
+
 
 SpotifyApiClient::SpotifyApiClient(QString id, QString secret, QString token):
-    clientId(id),
-    clientSecret(secret),
-    refreshToken(token)
+    clientId_(id),
+    clientSecret_(secret),
+    refreshToken_(token)
 {
 }
+
+QString SpotifyApiClient::clientId() { return clientId_; }
+
+void SpotifyApiClient::setClientId(const QString &id) { clientId_ = id; }
+
+QString SpotifyApiClient::clientSecret() { return clientSecret_; }
+
+void SpotifyApiClient::setClientSecret(const QString &secret) { clientSecret_ = secret; }
+
+QString SpotifyApiClient::refreshToken() { return refreshToken_; }
+
+void SpotifyApiClient::setRefreshToken(const QString &token) { refreshToken_ = token; }
 
 bool SpotifyApiClient::isAccessTokenExpired() const
 {
@@ -31,7 +50,7 @@ bool SpotifyApiClient::refreshAccessToken()
 {
     auto request = QNetworkRequest(QUrl(TOKEN_URL));
 
-    const auto hash = QString("%1:%2").arg(clientId, clientSecret).toUtf8().toBase64();
+    const auto hash = QString("%1:%2").arg(clientId_, clientSecret_).toUtf8().toBase64();
     const auto header = QString("Basic ").append(hash);
 
     request.setRawHeader(QByteArray("Authorization"), header.toUtf8());
@@ -39,7 +58,7 @@ bool SpotifyApiClient::refreshAccessToken()
     request.setTransferTimeout(DEFAULT_TIMEOUT);
 
     const auto savedToken = accessToken;
-    const auto postData = QString("grant_type=refresh_token&refresh_token=%1").arg(refreshToken).toLocal8Bit();
+    const auto postData = QString("grant_type=refresh_token&refresh_token=%1").arg(refreshToken_).toLocal8Bit();
     const auto reply = network().post(request, postData);
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]

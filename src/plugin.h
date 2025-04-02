@@ -1,7 +1,6 @@
 // Copyright (c) 2020-2025 Ivo Šmerek
 
 #pragma once
-#include "spotifyApiClient.h"
 #include <albert/extensionplugin.h>
 #include <albert/triggerqueryhandler.h>
 #include <memory>
@@ -14,17 +13,38 @@ class Plugin final : public albert::ExtensionPlugin,
     ALBERT_PLUGIN
 
 public:
+
     Plugin();
     ~Plugin() override;
-
-private:
-    std::unique_ptr<SpotifyApiClient> api;
 
     QString defaultTrigger() const override;
     void handleTriggerQuery(albert::Query&) override;
     QWidget* buildConfigWidget() override;
 
-    QString settingsString(QAnyStringView key, const QVariant& defaultValue = {}) const;
-    int settingsInt(QAnyStringView key, const QVariant& defaultValue = {}) const;
-    bool settingsBool(QAnyStringView key, const QVariant& defaultValue = {}) const;
+    QString clientId() const;
+    void setClientId(const QString &);
+
+    QString clientSecret() const;
+    void setClientSecret(const QString &);
+
+    QString refreshToken() const;
+    void setRefreshToken(const QString &);
+
+    uint fetchCount() const;
+    void setFetchCount(uint);
+
+    bool showExplicitContent() const;
+    void setShowExplicitContent(bool);
+
+    QString spotifyCommand() const;
+    void setSpotifyCommand(const QString &);
+
+private:
+
+    std::unique_ptr<SpotifyApiClient> api;
+
+    uint fetch_count_;
+    bool show_explicit_content_;
+    QString spotify_command_;
+
 };

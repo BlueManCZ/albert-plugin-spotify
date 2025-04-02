@@ -28,21 +28,24 @@ inline auto STATE_LAST_DEVICE = "last_device";
 inline auto COVERS_DIR_NAME = "covers";
 
 
-Plugin::Plugin():
-    api(make_unique<SpotifyApiClient>(
-        settingsString(CFG_CLIENT_ID),
-        settingsString(CFG_CLIENT_SECRET),
-        settingsString(CFG_REFRESH_TOKEN)
-    ))
+Plugin::Plugin()
 {
+    const auto s = settings();
+
+    api = make_unique<SpotifyApiClient>(
+        s->value(CFG_CLIENT_ID).toString(),
+        s->value(CFG_CLIENT_SECRET).toString(),
+        s->value(CFG_REFRESH_TOKEN).toString()
+    );
+
+    fetch_count_ = s->value(CFG_NUM_RESULTS).toUInt();
+    show_explicit_content_ = s->value(CFG_ALLOW_EXPLICIT).toBool();
+    spotify_command_ = s->value(CFG_SPOTIFY_EXECUTABLE).toString();
 }
 
 Plugin::~Plugin() = default;
 
-QString Plugin::defaultTrigger() const
-{
-    return "play ";
-}
+QString Plugin::defaultTrigger() const { return "play "; }
 
 void Plugin::handleTriggerQuery(Query &query)
 {
@@ -74,7 +77,7 @@ void Plugin::handleTriggerQuery(Query &query)
     }
 
     // Search for tracks on Spotify using the query.
-    const auto tracks = api->searchTracks(query.string(), settingsInt(CFG_NUM_RESULTS, DEF_NUM_RESULTS));
+    const auto tracks = api->searchTracks(query.string(), fetchCount());
 
     const auto coversCacheLocation = cacheLocation() / COVERS_DIR_NAME;
 
@@ -84,7 +87,8 @@ void Plugin::handleTriggerQuery(Query &query)
     for (const auto& track : tracks)
     {
         // If the track is explicit and the user doesn't want to see explicit tracks, skip it.
-        if (track.isExplicit && !settingsBool(CFG_ALLOW_EXPLICIT)) continue;
+        if (track.isExplicit && !showExplicitContent())
+            continue;
 
         const auto filename = QString("%1/%2.jpeg").arg(coversCacheLocation.c_str(), track.albumId);
 
@@ -110,10 +114,7 @@ void Plugin::handleTriggerQuery(Query &query)
                 if (const auto devices = api->getDevices();
                     devices.isEmpty())
                 {
-                    runDetachedProcess(
-                        QStringList() << settingsString(
-                            CFG_SPOTIFY_EXECUTABLE,
-                            DEF_SPOTIFY_EXECUTABLE));
+                    runDetachedProcess({spotify_command_});
                     api->waitForDeviceAndPlay(track);
                     INFO << "Playing on local Spotify.";
                 }
@@ -179,32 +180,29 @@ QWidget* Plugin::buildConfigWidget()
     Ui::ConfigWidget ui;
     ui.setupUi(widget);
 
-    ui.lineEdit_client_id->setText(settingsString(CFG_CLIENT_ID));
-    connect(ui.lineEdit_client_id,
-            &QLineEdit::textEdited,
-            this, [this](const QString& value)
-            {
-                settings()->setValue(CFG_CLIENT_ID, value);
-                api->setClientId(value);
-            });
+    ui.lineEdit_client_id->setText(clientId());
+    connect(ui.lineEdit_client_id, &QLineEdit::textEdited,
+            this, &Plugin::setClientId);
 
-    ui.lineEdit_client_secret->setText(settingsString(CFG_CLIENT_SECRET));
-    connect(ui.lineEdit_client_secret,
-            &QLineEdit::textEdited,
-            this, [this](const QString& value)
-            {
-                settings()->setValue(CFG_CLIENT_SECRET, value);
-                api->setClientSecret(value);
-            });
+    ui.lineEdit_client_secret->setText(clientSecret());
+    connect(ui.lineEdit_client_secret, &QLineEdit::textEdited,
+            this, &Plugin::setClientSecret);
 
-    ui.lineEdit_refresh_token->setText(settingsString(CFG_REFRESH_TOKEN));
-    connect(ui.lineEdit_refresh_token,
-            &QLineEdit::textEdited,
-            this, [this](const QString& value)
-            {
-                settings()->setValue(CFG_REFRESH_TOKEN, value);
-                api->setRefreshToken(value);
-            });
+    ui.lineEdit_refresh_token->setText(refreshToken());
+    connect(ui.lineEdit_refresh_token, &QLineEdit::textEdited,
+            this, &Plugin::setRefreshToken);
+
+    ui.checkBox_explicit->setChecked(showExplicitContent());
+    connect(ui.checkBox_explicit, &QCheckBox::toggled,
+            this, &Plugin::setShowExplicitContent);
+
+    ui.spinBox_number_of_results->setValue(fetchCount());
+    connect(ui.spinBox_number_of_results, &QSpinBox::valueChanged,
+            this, &Plugin::setFetchCount);
+
+    ui.lineEdit_spotify_executable->setText(spotifyCommand());
+    connect(ui.lineEdit_spotify_executable, &QLineEdit::textEdited,
+            this, &Plugin::setSpotifyCommand);
 
     // Bind "Test connection" button
     connect(ui.pushButton_test_connection, &QPushButton::clicked, this, [this]
@@ -228,49 +226,74 @@ QWidget* Plugin::buildConfigWidget()
         delete messageBox;
     });
 
-    ui.checkBox_explicit->setChecked(settingsBool(CFG_ALLOW_EXPLICIT));
-    connect(ui.checkBox_explicit,
-            &QCheckBox::toggled,
-            this, [this](const bool value)
-            {
-                settings()->setValue(CFG_ALLOW_EXPLICIT, value);
-            });
-
-    ui.spinBox_number_of_results->setValue(settingsInt(CFG_NUM_RESULTS, DEF_NUM_RESULTS));
-    connect(ui.spinBox_number_of_results,
-            &QSpinBox::valueChanged,
-            this, [this](const int value)
-            {
-                settings()->setValue(CFG_NUM_RESULTS, value);
-            });
-
-    ui.lineEdit_spotify_executable->setText(settingsString(CFG_SPOTIFY_EXECUTABLE));
-    connect(ui.lineEdit_spotify_executable,
-            &QLineEdit::textEdited,
-            this, [this](const QString& value)
-            {
-                if (value.isEmpty())
-                {
-                    settings()->remove(CFG_SPOTIFY_EXECUTABLE);
-                    return;
-                }
-                settings()->setValue(CFG_SPOTIFY_EXECUTABLE, value);
-            });
-
     return widget;
 }
 
-QString Plugin::settingsString(const QAnyStringView key, const QVariant& defaultValue) const
+QString Plugin::clientId() const { return api->clientId(); }
+
+void Plugin::setClientId(const QString &v)
 {
-    return settings()->value(key, defaultValue).toString();
+    if(api->clientId() == v)
+        return;
+
+    api->setClientId(v);
+    settings()->setValue(CFG_CLIENT_ID, v);
 }
 
-int Plugin::settingsInt(const QAnyStringView key, const QVariant& defaultValue) const
+QString Plugin::clientSecret() const { return api->clientSecret(); }
+
+void Plugin::setClientSecret(const QString &v)
 {
-    return settings()->value(key, defaultValue).toInt();
+    if(api->clientSecret() == v)
+        return;
+
+    api->setClientSecret(v);
+    settings()->setValue(CFG_CLIENT_SECRET, v);
 }
 
-bool Plugin::settingsBool(const QAnyStringView key, const QVariant& defaultValue) const
+QString Plugin::refreshToken() const { return api->refreshToken(); }
+
+void Plugin::setRefreshToken(const QString &v)
 {
-    return settings()->value(key, defaultValue).toBool();
+    if(api->refreshToken() == v)
+        return;
+
+    api->setRefreshToken(v);
+    settings()->setValue(CFG_REFRESH_TOKEN, v);
+}
+
+uint Plugin::fetchCount() const { return fetch_count_; }
+
+void Plugin::setFetchCount(uint v)
+{
+    if(fetch_count_ == v)
+        return;
+
+    fetch_count_ = v;
+    settings()->setValue(CFG_NUM_RESULTS, v);
+}
+
+bool Plugin::showExplicitContent() const { return show_explicit_content_; }
+
+void Plugin::setShowExplicitContent(bool v)
+{
+    if(show_explicit_content_ == v)
+        return;
+
+    show_explicit_content_ = v;
+    settings()->setValue(CFG_ALLOW_EXPLICIT, v);
+}
+
+QString Plugin::spotifyCommand() const { return spotify_command_; }
+
+void Plugin::setSpotifyCommand(const QString &v)
+{
+    if(spotify_command_ == v)
+        return;
+
+    spotify_command_ = v;
+    if (v.isEmpty())
+        settings()->remove(CFG_SPOTIFY_EXECUTABLE);
+    else
+        settings()->setValue(CFG_SPOTIFY_EXECUTABLE, v);
 }

@@ -9,13 +9,6 @@
 class QNetworkRequest;
 
 
-inline QString TOKEN_URL = "https://accounts.spotify.com/api/token";
-inline QString SEARCH_URL = "https://api.spotify.com/v1/search?q=%1&type=%2&limit=%3";
-inline QString DEVICES_URL = "https://api.spotify.com/v1/me/player/devices";
-inline QString QUEUE_URL = "https://api.spotify.com/v1/me/player/queue?uri=%1";
-inline QString PLAY_URL = "https://api.spotify.com/v1/me/player/play?device_id=%1";
-
-inline int DEFAULT_TIMEOUT = 10000;
 
 /**
  * Spotify API client for interacting with the Spotify Web API.
@@ -28,9 +21,14 @@ public:
     /** Contains string description of the last error message. */
     QString lastErrorMessage;
 
-    void setClientId(const QString& id) { clientId = id; }
-    void setClientSecret(const QString& secret) { clientSecret = secret; }
-    void setRefreshToken(const QString& token) { refreshToken = token; }
+    QString clientId();
+    void setClientId(const QString& id);
+
+    QString clientSecret();
+    void setClientSecret(const QString& secret);
+
+    QString refreshToken();
+    void setRefreshToken(const QString& token);
 
     /**
      * Check if the access token is expired.
@@ -102,9 +100,9 @@ public:
 private:
     Q_OBJECT
 
-    QString clientId;
-    QString clientSecret;
-    QString refreshToken;
+    QString clientId_;
+    QString clientSecret_;
+    QString refreshToken_;
     QString accessToken;
 
     QDateTime expirationTime;
