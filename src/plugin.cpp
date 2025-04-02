@@ -20,8 +20,9 @@ inline auto CFG_REFRESH_TOKEN = "refresh_token";
 inline auto CFG_ALLOW_EXPLICIT = "allow_explicit";
 inline auto CFG_NUM_RESULTS = "number_of_results";
 inline auto CFG_SPOTIFY_EXECUTABLE = "spotify_executable";
-inline auto CFG_CACHE_DIR = "cache_directory";
 inline auto CFG_LAST_DEVICE = "last_device";
+
+inline auto COVERS_DIR_NAME = "covers";
 
 inline auto DEF_NUM_RESULTS = 5;
 inline auto DEF_SPOTIFY_EXECUTABLE = "spotify";
@@ -79,19 +80,18 @@ void Plugin::handleTriggerQuery(Query &query)
     const auto devices = api->getDevices();
 
     const auto activeDevice = findActiveDevice(devices);
-    const auto cacheDirectory = settingsString(CFG_CACHE_DIR, QDir::tempPath() + "/albert-spotify-covers");
 
-    if (!QDir(cacheDirectory).exists() && QDir().mkpath(cacheDirectory))
-    {
-        INFO << "Cache directory created:" << cacheDirectory;
-    }
+    const auto coversCacheLocation = cacheLocation() / COVERS_DIR_NAME;
+
+    if (!is_directory(coversCacheLocation))
+        tryCreateDirectory(coversCacheLocation);
 
     for (const auto& track : tracks)
     {
         // If the track is explicit and the user doesn't want to see explicit tracks, skip it.
         if (track.isExplicit && !settingsBool(CFG_ALLOW_EXPLICIT)) continue;
 
-        const auto filename = QString("%1/%2.jpeg").arg(cacheDirectory, track.albumId);
+        const auto filename = QString("%1/%2.jpeg").arg(coversCacheLocation.c_str(), track.albumId);
 
         // Download cover image of the album.
         api->downloadFile(track.imageUrl, filename);
@@ -255,19 +255,6 @@ QWidget* Plugin::buildConfigWidget()
                     return;
                 }
                 settings()->setValue(CFG_SPOTIFY_EXECUTABLE, value);
-            });
-
-    ui.lineEdit_cache_directory->setText(settingsString(CFG_CACHE_DIR));
-    connect(ui.lineEdit_cache_directory,
-            &QLineEdit::textEdited,
-            this, [this](const QString& value)
-            {
-                if (value.isEmpty())
-                {
-                    settings()->remove(CFG_CACHE_DIR);
-                    return;
-                }
-                settings()->setValue(CFG_CACHE_DIR, value);
             });
 
     return widget;
