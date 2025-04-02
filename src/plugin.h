@@ -19,7 +19,7 @@ private:
     SpotifyApiClient* api;
 
     QString defaultTrigger() const override;
-    void handleTriggerQuery(albert::Query*) override;
+    void handleTriggerQuery(albert::Query&) override;
     QWidget* buildConfigWidget() override;
 
     /**

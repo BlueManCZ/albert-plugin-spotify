@@ -47,12 +47,12 @@ QString Plugin::defaultTrigger() const
     return "play ";
 }
 
-void Plugin::handleTriggerQuery(Query* query)
+void Plugin::handleTriggerQuery(Query &query)
 {
-    if (const auto trimmed = query->string().trimmed(); trimmed.isEmpty())
+    if (const auto trimmed = query.string().trimmed(); trimmed.isEmpty())
         return;
 
-    if (!query->isValid())
+    if (!query.isValid())
         return;
 
     // Each query is executed in different thread, so reset the network manager.
@@ -63,7 +63,7 @@ void Plugin::handleTriggerQuery(Query* query)
     if (!api->checkServerResponse())
     {
         DEBG << "No internet connection!";
-        query->add(StandardItem::make(nullptr, "Can't get an answer from the server.",
+        query.add(StandardItem::make(nullptr, "Can't get an answer from the server.",
                                       "Please, check your internet connection.", nullptr));
         return;
     }
@@ -74,14 +74,14 @@ void Plugin::handleTriggerQuery(Query* query)
         DEBG << "Token expired. Refreshing";
         if (!api->refreshAccessToken())
         {
-            query->add(StandardItem::make(nullptr, "Wrong credentials.",
+            query.add(StandardItem::make(nullptr, "Wrong credentials.",
                                           "Please, check the extension settings.", nullptr));
             return;
         }
     }
 
     // Search for tracks on Spotify using the query.
-    const auto tracks = api->searchTracks(query->string(), settingsInt(CFG_NUM_RESULTS, DEF_NUM_RESULTS));
+    const auto tracks = api->searchTracks(query.string(), settingsInt(CFG_NUM_RESULTS, DEF_NUM_RESULTS));
 
     // Get available Spotify devices.
     const auto devices = api->getDevices();
@@ -195,7 +195,7 @@ void Plugin::handleTriggerQuery(Query* query)
 
         result->setActions(actions);
 
-        query->add(result);
+        query.add(result);
     }
 }
 
