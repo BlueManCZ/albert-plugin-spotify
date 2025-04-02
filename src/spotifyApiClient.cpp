@@ -9,7 +9,10 @@
 #include <QNetworkReply>
 #include <QSaveFile>
 #include <QtConcurrentRun>
+#include <albert/albert.h>
 #include <albert/logging.h>
+using namespace albert;
+using namespace std;
 
 
 SpotifyApiClient::SpotifyApiClient(QString id, QString secret, QString token):
@@ -19,16 +22,6 @@ SpotifyApiClient::SpotifyApiClient(QString id, QString secret, QString token):
 {
 }
 
-SpotifyApiClient::~SpotifyApiClient()
-{
-    delete manager;
-}
-
-void SpotifyApiClient::resetNetworkManager()
-{
-    manager = new QNetworkAccessManager();
-}
-
 bool SpotifyApiClient::isAccessTokenExpired() const
 {
     return QDateTime::currentDateTime() > expirationTime;
@@ -36,8 +29,6 @@ bool SpotifyApiClient::isAccessTokenExpired() const
 
 bool SpotifyApiClient::refreshAccessToken()
 {
-    if (!isNetworkManagerSafe()) return false;
-
     auto request = QNetworkRequest(QUrl(TOKEN_URL));
 
     const auto hash = QString("%1:%2").arg(clientId, clientSecret).toUtf8().toBase64();
@@ -49,9 +40,9 @@ bool SpotifyApiClient::refreshAccessToken()
 
     const auto savedToken = accessToken;
     const auto postData = QString("grant_type=refresh_token&refresh_token=%1").arg(refreshToken).toLocal8Bit();
-    const auto reply = this->manager->post(request, postData);
+    const auto reply = network().post(request, postData);
 
-    connect(reply, &QNetworkReply::finished, [this, reply]
+    connect(reply, &QNetworkReply::finished, this, [this, reply]
     {
         reply->deleteLater();
 
@@ -81,10 +72,8 @@ bool SpotifyApiClient::checkServerResponse() const
 {
     try
     {
-        if (!isNetworkManagerSafe()) return false;
-
         const auto request = QNetworkRequest(QUrl(TOKEN_URL));
-        const auto reply = manager->get(request);
+        const auto reply = network().get(request);
 
         waitForSignal(reply, SIGNAL(finished()));
 
@@ -100,15 +89,15 @@ bool SpotifyApiClient::checkServerResponse() const
 
 void SpotifyApiClient::downloadFile(const QString& url, const QString& filePath)
 {
-    if (!isNetworkManagerSafe()) return;
-    if (const QFileInfo fileInfo(filePath); fileInfo.exists()) return;
+    if (const QFileInfo fileInfo(filePath); fileInfo.exists())
+        return;
 
     fileLock.lockForWrite();
 
     const auto request = QNetworkRequest(url);
-    const auto reply = manager->get(request);
+    const auto reply = network().get(request);
 
-    connect(reply, &QNetworkReply::finished, [reply, filePath]
+    connect(reply, &QNetworkReply::finished, this, [reply, filePath]
     {
         reply->deleteLater();
 
@@ -128,13 +117,11 @@ void SpotifyApiClient::downloadFile(const QString& url, const QString& filePath)
 
 QVector<Track> SpotifyApiClient::searchTracks(const QString& query, const int limit)
 {
-    if (!isNetworkManagerSafe()) return {};
-
     const auto url = QUrl(SEARCH_URL.arg(query, "track", QString::number(limit)));
     const auto request = createRequest(url);
-    const auto reply = manager->get(request);
+    const auto reply = network().get(request);
 
-    auto tracksArray = std::make_shared<QJsonArray>();
+    auto tracksArray = make_shared<QJsonArray>();
 
     connect(reply, &QNetworkReply::finished, [reply, tracksArray]
     {
@@ -147,9 +134,9 @@ QVector<Track> SpotifyApiClient::searchTracks(const QString& query, const int li
 
     waitForSignal(reply, SIGNAL(finished()));
 
-    const auto tracks = std::make_shared<QVector<Track>>();
+    const auto tracks = make_shared<QVector<Track>>();
 
-    for (auto trackData : *tracksArray)
+    for (const auto &trackData : as_const(*tracksArray))
     {
         tracks->append(parseTrack(trackData.toObject()));
     }
@@ -159,12 +146,10 @@ QVector<Track> SpotifyApiClient::searchTracks(const QString& query, const int li
 
 QVector<Device> SpotifyApiClient::getDevices()
 {
-    if (!isNetworkManagerSafe()) return {};
-
     const auto request = createRequest(QUrl(DEVICES_URL));
-    const auto reply = manager->get(request);
+    const auto reply = network().get(request);
 
-    auto devicesArray = std::make_shared<QJsonArray>();
+    auto devicesArray = make_shared<QJsonArray>();
 
     connect(reply, &QNetworkReply::finished, [reply, devicesArray]
     {
@@ -177,9 +162,9 @@ QVector<Device> SpotifyApiClient::getDevices()
 
     waitForSignal(reply, SIGNAL(finished()));
 
-    const auto devices = std::make_shared<QVector<Device>>();
+    const auto devices = make_shared<QVector<Device>>();
 
-    for (auto deviceData : *devicesArray)
+    for (auto deviceData : as_const(*devicesArray))
     {
         devices->append(parseDevice(deviceData.toObject()));
     }
@@ -189,12 +174,10 @@ QVector<Device> SpotifyApiClient::getDevices()
 
 void SpotifyApiClient::waitForDevice(const Track& track)
 {
-    if (!isNetworkManagerSafe()) return;
-
     const auto request = createRequest(QUrl(DEVICES_URL));
-    const auto reply = manager->get(request);
+    const auto reply = network().get(request);
 
-    connect(reply, &QNetworkReply::finished, [this, reply, track]
+    connect(reply, &QNetworkReply::finished, this, [this, reply, track]
     {
         reply->deleteLater();
 
@@ -219,21 +202,15 @@ void SpotifyApiClient::waitForDeviceAndPlay(const Track& track)
 
 void SpotifyApiClient::addTrackToQueue(const Track& track) const
 {
-    if (!isNetworkManagerSafe()) return;
-
     const auto request = createRequest(QUrl(QUEUE_URL.arg(track.uri)));
-
-    manager->post(request, "");
+    network().post(request, "");
 }
 
 void SpotifyApiClient::playTrack(const Track& track, const QString& deviceId) const
 {
-    if (!isNetworkManagerSafe()) return;
-
     const auto request = createRequest(QUrl(PLAY_URL.arg(deviceId)));
     const auto postData = QString(R"({"uris": ["%1"]})").arg(track.uri).toLocal8Bit();
-
-    manager->put(request, postData);
+    network().put(request, postData);
 }
 
 // PRIVATE METHODS
@@ -252,7 +229,7 @@ QJsonObject SpotifyApiClient::stringToJson(const QString& string)
 
 QNetworkRequest SpotifyApiClient::createRequest(const QUrl& url) const
 {
-    const auto request = std::make_shared<QNetworkRequest>(url);
+    const auto request = make_shared<QNetworkRequest>(url);
     const auto header = QString("Bearer ") + accessToken;
 
     request->setRawHeader(QByteArray("Authorization"), header.toUtf8());
@@ -261,11 +238,6 @@ QNetworkRequest SpotifyApiClient::createRequest(const QUrl& url) const
     request->setTransferTimeout(DEFAULT_TIMEOUT);
 
     return *request;
-}
-
-bool SpotifyApiClient::isNetworkManagerSafe() const
-{
-    return manager != nullptr && manager->thread() == QThread::currentThread();
 }
 
 Device SpotifyApiClient::parseDevice(QJsonObject deviceData)
@@ -299,10 +271,8 @@ Track SpotifyApiClient::parseTrack(QJsonObject trackData)
 QString SpotifyApiClient::linearizeArtists(const QJsonArray& artists)
 {
     QStringList linearizedArtists;
-    std::ranges::transform(artists, std::back_inserter(linearizedArtists), [](const QJsonValue& artist)
-    {
-        return artist.toObject()["name"].toString();
-    });
+    ranges::transform(artists, back_inserter(linearizedArtists),
+                      [](const QJsonValue& artist){ return artist["name"].toString(); });
 
     return linearizedArtists.join(", ");
 }

@@ -51,10 +51,6 @@ void Plugin::handleTriggerQuery(Query &query)
     if (!query.isValid())
         return;
 
-    // Each query is executed in different thread, so reset the network manager.
-    // Read the JSDoc of the method for more information.
-    api->resetNetworkManager();
-
     // If there is no internet connection, make one alerting item to let the user know.
     if (!api->checkServerResponse())
     {
@@ -115,10 +111,6 @@ void Plugin::handleTriggerQuery(Query &query)
             "Play on Spotify",
             [this, track, activeDevice, devices]
             {
-                // Each action is executed in different thread, so reset the network manager.
-                // Read the JSDoc of the method for more information.
-                api->resetNetworkManager();
-
                 // Check if the last-used device is still available.
                 const auto lastDeviceId = settingsString(CFG_LAST_DEVICE);
                 const auto lastDeviceAvailable = findDevice(devices, lastDeviceId).id != "";
@@ -156,18 +148,8 @@ void Plugin::handleTriggerQuery(Query &query)
             }
         );
 
-        actions.emplace_back(
-            "queue",
-            "Add to the Spotify queue",
-            [this, track]
-            {
-                // Each action is executed in different thread, so reset the network manager.
-                // Read the JSDoc of the method for more information.
-                api->resetNetworkManager();
-
-                api->addTrackToQueue(track);
-            }
-        );
+        actions.emplace_back("queue", "Add to the Spotify queue",
+                             [this, track] { api->addTrackToQueue(track); });
 
         // For each device except active create action to transfer Spotify playback to this device.
         for (const auto& device : devices)
@@ -179,10 +161,6 @@ void Plugin::handleTriggerQuery(Query &query)
                 QString("Play on %1 (%2)").arg(device.type, device.name),
                 [this, track, device]
                 {
-                    // Each action is executed in different thread, so reset the network manager.
-                    // Read the JSDoc of the method for more information.
-                    api->resetNetworkManager();
-
                     api->playTrack(track, device.id);
                     settings()->setValue(CFG_LAST_DEVICE, device.id);
                 }
@@ -231,10 +209,6 @@ QWidget* Plugin::buildConfigWidget()
     // Bind "Test connection" button
     connect(ui.pushButton_test_connection, &QPushButton::clicked, this, [this]
     {
-        // UI actions are executed in different thread, so reset the network manager.
-        // Read the JSDoc of the method for more information.
-        api->resetNetworkManager();
-
         const bool refreshStatus = api->refreshAccessToken();
 
         QString message = "Everything is set up correctly.";

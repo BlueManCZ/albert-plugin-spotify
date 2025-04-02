@@ -3,8 +3,10 @@
 #pragma once
 #include "types/device.h"
 #include "types/track.h"
-#include <QNetworkAccessManager>
+#include <QDateTime>
+#include <QObject>
 #include <QReadWritelock>
+class QNetworkRequest;
 
 
 inline QString TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -22,7 +24,6 @@ class SpotifyApiClient final : public QObject
 {
 public:
     explicit SpotifyApiClient(QString clientId, QString clientSecret, QString refreshToken);
-    ~SpotifyApiClient() override;
 
     /** Contains string description of the last error message. */
     QString lastErrorMessage;
@@ -30,14 +31,6 @@ public:
     void setClientId(const QString& id) { clientId = id; }
     void setClientSecret(const QString& secret) { clientSecret = secret; }
     void setRefreshToken(const QString& token) { refreshToken = token; }
-
-    /**
-     * Reset the network manager. This is necessary because the network manager
-     * is not guaranteed to be thread-safe and shouldn't be shared between threads.
-     * Call this method each time in a new thread.
-     * @see https://stackoverflow.com/questions/35684123
-     */
-    void resetNetworkManager();
 
     /**
      * Check if the access token is expired.
@@ -109,9 +102,6 @@ public:
 private:
     Q_OBJECT
 
-    /** Network manager for sending requests. */
-    QNetworkAccessManager* manager = nullptr;
-
     QString clientId;
     QString clientSecret;
     QString refreshToken;
@@ -140,11 +130,6 @@ private:
      * @return The created request with access token from instance.
      */
     QNetworkRequest createRequest(const QUrl& url) const;
-
-    /**
-     * @return true if the network manager is ready for current thread.
-     */
-    bool isNetworkManagerSafe() const;
 
     /**
      * Parse a JSON object to a device object.
