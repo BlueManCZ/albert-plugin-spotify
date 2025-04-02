@@ -4,6 +4,8 @@
 #include "spotifyApiClient.h"
 #include <albert/extensionplugin.h>
 #include <albert/triggerqueryhandler.h>
+#include <memory>
+class SpotifyApiClient;
 
 
 class Plugin final : public albert::ExtensionPlugin,
@@ -16,7 +18,7 @@ public:
     ~Plugin() override;
 
 private:
-    SpotifyApiClient* api;
+    std::unique_ptr<SpotifyApiClient> api;
 
     QString defaultTrigger() const override;
     void handleTriggerQuery(albert::Query&) override;

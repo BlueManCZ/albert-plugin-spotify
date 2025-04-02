@@ -15,29 +15,21 @@ inline QString PLAY_URL = "https://api.spotify.com/v1/me/player/play?device_id=%
 
 inline int DEFAULT_TIMEOUT = 10000;
 
-struct apiCredentials
-{
-    QString clientId;
-    QString clientSecret;
-    QString refreshToken;
-};
-
-
 /**
  * Spotify API client for interacting with the Spotify Web API.
  */
 class SpotifyApiClient final : public QObject
 {
 public:
+    explicit SpotifyApiClient(QString clientId, QString clientSecret, QString refreshToken);
+    ~SpotifyApiClient() override;
+
     /** Contains string description of the last error message. */
     QString lastErrorMessage;
 
     void setClientId(const QString& id) { clientId = id; }
     void setClientSecret(const QString& secret) { clientSecret = secret; }
     void setRefreshToken(const QString& token) { refreshToken = token; }
-
-    explicit SpotifyApiClient(const apiCredentials& credentials);
-    ~SpotifyApiClient() override;
 
     /**
      * Reset the network manager. This is necessary because the network manager

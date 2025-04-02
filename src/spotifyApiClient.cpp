@@ -12,11 +12,11 @@
 #include <albert/logging.h>
 
 
-SpotifyApiClient::SpotifyApiClient(const apiCredentials& credentials)
+SpotifyApiClient::SpotifyApiClient(QString id, QString secret, QString token):
+    clientId(id),
+    clientSecret(secret),
+    refreshToken(token)
 {
-    clientId = credentials.clientId;
-    clientSecret = credentials.clientSecret;
-    refreshToken = credentials.refreshToken;
 }
 
 SpotifyApiClient::~SpotifyApiClient()

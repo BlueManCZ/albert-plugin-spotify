@@ -27,20 +27,16 @@ inline auto DEF_NUM_RESULTS = 5;
 inline auto DEF_SPOTIFY_EXECUTABLE = "spotify";
 
 
-Plugin::Plugin()
-{
-    const auto credentials = apiCredentials{
+Plugin::Plugin():
+    api(std::make_unique<SpotifyApiClient>(
         settingsString(CFG_CLIENT_ID),
         settingsString(CFG_CLIENT_SECRET),
-        settingsString(CFG_REFRESH_TOKEN),
-    };
-    api = new SpotifyApiClient(credentials);
+        settingsString(CFG_REFRESH_TOKEN)
+    ))
+{
 }
 
-Plugin::~Plugin()
-{
-    delete api;
-}
+Plugin::~Plugin() = default;
 
 QString Plugin::defaultTrigger() const
 {
