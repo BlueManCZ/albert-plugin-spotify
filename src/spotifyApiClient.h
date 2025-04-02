@@ -1,27 +1,13 @@
 // Copyright (c) 2020-2025 Ivo Šmerek
 
 #pragma once
-#include <qreadwritelock.h>
-#include <QtNetwork/QNetworkAccessManager>
-
 #include "types/device.h"
 #include "types/track.h"
+#include <QDateTime>
+#include <QObject>
+#include <QReadWritelock>
+class QNetworkRequest;
 
-
-inline QString TOKEN_URL = "https://accounts.spotify.com/api/token";
-inline QString SEARCH_URL = "https://api.spotify.com/v1/search?q=%1&type=%2&limit=%3";
-inline QString DEVICES_URL = "https://api.spotify.com/v1/me/player/devices";
-inline QString QUEUE_URL = "https://api.spotify.com/v1/me/player/queue?uri=%1";
-inline QString PLAY_URL = "https://api.spotify.com/v1/me/player/play?device_id=%1";
-
-inline int DEFAULT_TIMEOUT = 10000;
-
-struct apiCredentials
-{
-    QString clientId;
-    QString clientSecret;
-    QString refreshToken;
-};
 
 
 /**
@@ -30,23 +16,19 @@ struct apiCredentials
 class SpotifyApiClient final : public QObject
 {
 public:
+    explicit SpotifyApiClient(QString clientId, QString clientSecret, QString refreshToken);
+
     /** Contains string description of the last error message. */
     QString lastErrorMessage;
 
-    void setClientId(const QString& id) { clientId = id; }
-    void setClientSecret(const QString& secret) { clientSecret = secret; }
-    void setRefreshToken(const QString& token) { refreshToken = token; }
+    QString clientId();
+    void setClientId(const QString& id);
 
-    explicit SpotifyApiClient(const apiCredentials& credentials);
-    ~SpotifyApiClient() override;
+    QString clientSecret();
+    void setClientSecret(const QString& secret);
 
-    /**
-     * Reset the network manager. This is necessary because the network manager
-     * is not guaranteed to be thread-safe and shouldn't be shared between threads.
-     * Call this method each time in a new thread.
-     * @see https://stackoverflow.com/questions/35684123
-     */
-    void resetNetworkManager();
+    QString refreshToken();
+    void setRefreshToken(const QString& token);
 
     /**
      * Check if the access token is expired.
@@ -118,12 +100,9 @@ public:
 private:
     Q_OBJECT
 
-    /** Network manager for sending requests. */
-    QNetworkAccessManager* manager = nullptr;
-
-    QString clientId;
-    QString clientSecret;
-    QString refreshToken;
+    QString clientId_;
+    QString clientSecret_;
+    QString refreshToken_;
     QString accessToken;
 
     QDateTime expirationTime;
@@ -149,11 +128,6 @@ private:
      * @return The created request with access token from instance.
      */
     QNetworkRequest createRequest(const QUrl& url) const;
-
-    /**
-     * @return true if the network manager is ready for current thread.
-     */
-    bool isNetworkManagerSafe() const;
 
     /**
      * Parse a JSON object to a device object.

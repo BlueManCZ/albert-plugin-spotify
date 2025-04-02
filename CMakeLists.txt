@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
+project(spotify VERSION 1.2)
+
 find_package(Albert REQUIRED)
 
-project(spotify VERSION 1.0.0)
-
-file(GLOB_RECURSE SOURCES "src/*")
-
-albert_plugin(QT Widgets)
+albert_plugin(QT Widgets Network)

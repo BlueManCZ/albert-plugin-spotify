@@ -2,10 +2,9 @@
 
 #pragma once
 #include <albert/extensionplugin.h>
-#include "albert/property.h"
-#include "albert/triggerqueryhandler.h"
-
-#include "spotifyApiClient.h"
+#include <albert/triggerqueryhandler.h>
+#include <memory>
+class SpotifyApiClient;
 
 
 class Plugin final : public albert::ExtensionPlugin,
@@ -14,37 +13,38 @@ class Plugin final : public albert::ExtensionPlugin,
     ALBERT_PLUGIN
 
 public:
+
     Plugin();
     ~Plugin() override;
 
-private:
-    SpotifyApiClient* api;
-
     QString defaultTrigger() const override;
-    void handleTriggerQuery(albert::Query*) override;
+    void handleTriggerQuery(albert::Query&) override;
     QWidget* buildConfigWidget() override;
 
-    /**
-     * Find the active device from a list of devices.
-     * @param devices The list of devices to search.
-     * @return The active device, or an empty device if none is active.
-     */
-    static Device findActiveDevice(const QVector<Device>& devices);
+    QString clientId() const;
+    void setClientId(const QString &);
 
-    /**
-     * Find a device by ID from a list of devices.
-     * @param devices The list of devices to search.
-     * @param id The ID of the device to find.
-     * @return The device with the given ID, or an empty device if none is found.
-     */
-    static Device findDevice(const QVector<Device>& devices, const QString& id);
+    QString clientSecret() const;
+    void setClientSecret(const QString &);
 
-    // Helper functions for accessing settings
+    QString refreshToken() const;
+    void setRefreshToken(const QString &);
 
-    QString settingsString(QAnyStringView key) const;
-    QString settingsString(QAnyStringView key, const QVariant& defaultValue) const;
-    int settingsInt(QAnyStringView key) const;
-    int settingsInt(QAnyStringView key, const QVariant& defaultValue) const;
-    bool settingsBool(QAnyStringView key) const;
-    bool settingsBool(QAnyStringView key, const QVariant& defaultValue) const;
+    uint fetchCount() const;
+    void setFetchCount(uint);
+
+    bool showExplicitContent() const;
+    void setShowExplicitContent(bool);
+
+    QString spotifyCommand() const;
+    void setSpotifyCommand(const QString &);
+
+private:
+
+    std::unique_ptr<SpotifyApiClient> api;
+
+    uint fetch_count_;
+    bool show_explicit_content_;
+    QString spotify_command_;
+
 };
