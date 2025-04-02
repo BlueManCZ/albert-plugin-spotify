@@ -12,24 +12,24 @@
 #include <albert/standarditem.h>
 ALBERT_LOGGING_CATEGORY("spotify")
 using namespace albert;
+using namespace std;
 
 
 inline auto CFG_CLIENT_ID = "client_id";
 inline auto CFG_CLIENT_SECRET = "client_secret";
 inline auto CFG_REFRESH_TOKEN = "refresh_token";
 inline auto CFG_ALLOW_EXPLICIT = "allow_explicit";
+inline auto DEF_ALLOW_EXPLICIT = true;
 inline auto CFG_NUM_RESULTS = "number_of_results";
-inline auto CFG_SPOTIFY_EXECUTABLE = "spotify_executable";
-inline auto CFG_LAST_DEVICE = "last_device";
-
-inline auto COVERS_DIR_NAME = "covers";
-
 inline auto DEF_NUM_RESULTS = 5;
+inline auto CFG_SPOTIFY_EXECUTABLE = "spotify_executable";
 inline auto DEF_SPOTIFY_EXECUTABLE = "spotify";
+inline auto STATE_LAST_DEVICE = "last_device";
+inline auto COVERS_DIR_NAME = "covers";
 
 
 Plugin::Plugin():
-    api(std::make_unique<SpotifyApiClient>(
+    api(make_unique<SpotifyApiClient>(
         settingsString(CFG_CLIENT_ID),
         settingsString(CFG_CLIENT_SECRET),
         settingsString(CFG_REFRESH_TOKEN)
@@ -76,11 +76,6 @@ void Plugin::handleTriggerQuery(Query &query)
     // Search for tracks on Spotify using the query.
     const auto tracks = api->searchTracks(query.string(), settingsInt(CFG_NUM_RESULTS, DEF_NUM_RESULTS));
 
-    // Get available Spotify devices.
-    const auto devices = api->getDevices();
-
-    const auto activeDevice = findActiveDevice(devices);
-
     const auto coversCacheLocation = cacheLocation() / COVERS_DIR_NAME;
 
     if (!is_directory(coversCacheLocation))
@@ -104,46 +99,51 @@ void Plugin::handleTriggerQuery(Query &query)
             nullptr,
             {filename});
 
-        auto actions = std::vector<Action>();
+        auto actions = vector<Action>();
 
         actions.emplace_back(
             "play",
             "Play on Spotify",
-            [this, track, activeDevice, devices]
+            [this, track]
             {
-                // Check if the last-used device is still available.
-                const auto lastDeviceId = settingsString(CFG_LAST_DEVICE);
-                const auto lastDeviceAvailable = findDevice(devices, lastDeviceId).id != "";
-
-                if (activeDevice.id != "")
+                // If we have no devices run local Spotify client
+                if (const auto devices = api->getDevices();
+                    devices.isEmpty())
                 {
-                    // If available, use an active device and play the track.
-                    api->playTrack(track, activeDevice.id);
-                    INFO << "Playing on active device.";
-                    settings()->setValue(CFG_LAST_DEVICE, activeDevice.id);
-                }
-                else if (lastDeviceAvailable)
-                {
-                    // If there is not an active device, use last-used one.
-                    api->playTrack(track, lastDeviceId);
-                    INFO << "Playing on last device.";
-                }
-                else if (!devices.isEmpty())
-                {
-                    // Use the first available device.
-                    api->playTrack(track, devices[0].id);
-                    INFO << "Playing on first found device.";
-                    settings()->setValue(CFG_LAST_DEVICE, devices[0].id);
-                }
-                else
-                {
-                    // Run local Spotify client, wait until it loads, and play the track.
                     runDetachedProcess(
                         QStringList() << settingsString(
                             CFG_SPOTIFY_EXECUTABLE,
                             DEF_SPOTIFY_EXECUTABLE));
                     api->waitForDeviceAndPlay(track);
                     INFO << "Playing on local Spotify.";
+                }
+
+                // If available, use an active device and play the track.
+                else if (auto it = ranges::find_if(devices, &Device::isActive);
+                    it != devices.cend())
+                {
+                    const auto activeDevice = *it;
+                    api->playTrack(track, it->id);
+                    INFO << "Playing on active device:" << it->name;
+                    state()->setValue(STATE_LAST_DEVICE, it->id);
+                }
+
+                // If available, use the last-used device.
+                else if (it = ranges::find_if(devices,
+                            [id=state()->value(STATE_LAST_DEVICE).toString()](const auto &d)
+                            { return d.id == id; });
+                         it != devices.end())
+                {
+                    api->playTrack(track, it->id);
+                    INFO << "Playing on last used device:" << it->name;
+                }
+
+                // Otherwise Use the first available device.
+                else
+                {
+                    api->playTrack(track, devices[0].id);
+                    INFO << "Playing on:" << devices[0].id;
+                    state()->setValue(STATE_LAST_DEVICE, devices[0].id);
                 }
             }
         );
@@ -152,7 +152,7 @@ void Plugin::handleTriggerQuery(Query &query)
                              [this, track] { api->addTrackToQueue(track); });
 
         // For each device except active create action to transfer Spotify playback to this device.
-        for (const auto& device : devices)
+        for (const auto& device : api->getDevices())
         {
             if (device.isActive) continue;
 
@@ -162,7 +162,7 @@ void Plugin::handleTriggerQuery(Query &query)
                 [this, track, device]
                 {
                     api->playTrack(track, device.id);
-                    settings()->setValue(CFG_LAST_DEVICE, device.id);
+                    state()->setValue(STATE_LAST_DEVICE, device.id);
                 }
             );
         }
@@ -258,32 +258,6 @@ QWidget* Plugin::buildConfigWidget()
             });
 
     return widget;
-}
-
-Device Plugin::findActiveDevice(const QVector<Device>& devices)
-{
-    for (const auto& device : devices)
-    {
-        if (device.isActive)
-        {
-            return device;
-        }
-    }
-
-    return {};
-}
-
-Device Plugin::findDevice(const QVector<Device>& devices, const QString& id)
-{
-    for (const auto& device : devices)
-    {
-        if (device.id == id)
-        {
-            return device;
-        }
-    }
-
-    return {};
 }
 
 QString Plugin::settingsString(const QAnyStringView key, const QVariant& defaultValue) const
