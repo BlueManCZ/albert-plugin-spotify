@@ -1,11 +1,9 @@
 // Copyright (c) 2020-2025 Ivo Šmerek
 
 #pragma once
-#include <albert/extensionplugin.h>
-#include "albert/property.h"
-#include "albert/triggerqueryhandler.h"
-
 #include "spotifyApiClient.h"
+#include <albert/extensionplugin.h>
+#include <albert/triggerqueryhandler.h>
 
 
 class Plugin final : public albert::ExtensionPlugin,

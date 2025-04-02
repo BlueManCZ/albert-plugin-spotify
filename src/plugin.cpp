@@ -1,19 +1,16 @@
 // Copyright (c) 2020-2025 Ivo Šmerek
 
 #include "plugin.h"
-
-#include <QMessageBox>
-#include <QThread>
-
+#include "spotifyApiClient.h"
 #include "ui_configwidget.h"
+#include <QDir>
+#include <QMessageBox>
+#include <QSettings>
+#include <QThread>
+#include <albert/albert.h>
 #include <albert/logging.h>
 #include <albert/standarditem.h>
-
-#include "spotifyApiClient.h"
-#include "albert/util.h"
-
 ALBERT_LOGGING_CATEGORY("spotify")
-
 using namespace albert;
 
 

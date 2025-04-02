@@ -1,7 +1,7 @@
 // Copyright (C) 2020-2025 Ivo Šmerek
 
 #pragma once
-#include <qt6/QtCore/QString>
+#include <QString>
 
 class Device
 {

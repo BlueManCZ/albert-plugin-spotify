@@ -1,16 +1,15 @@
 // Copyright (c) 2020-2025 Ivo Šmerek
 
+#include "spotifyApiClient.h"
 #include <QEventLoop>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QtConcurrent/qtconcurrentrun.h>
-#include <QtNetwork/QNetworkReply>
-#include <qsavefile.h>
-
-#include "albert/logging.h"
-#include "spotifyApiClient.h"
+#include <QNetworkReply>
+#include <QSaveFile>
+#include <QtConcurrentRun>
+#include <albert/logging.h>
 
 
 SpotifyApiClient::SpotifyApiClient(const apiCredentials& credentials)

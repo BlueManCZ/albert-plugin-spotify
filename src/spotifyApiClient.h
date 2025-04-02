@@ -1,11 +1,10 @@
 // Copyright (c) 2020-2025 Ivo Šmerek
 
 #pragma once
-#include <qreadwritelock.h>
-#include <QtNetwork/QNetworkAccessManager>
-
 #include "types/device.h"
 #include "types/track.h"
+#include <QNetworkAccessManager>
+#include <QReadWritelock>
 
 
 inline QString TOKEN_URL = "https://accounts.spotify.com/api/token";
