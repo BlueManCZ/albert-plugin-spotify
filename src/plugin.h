@@ -41,10 +41,7 @@ private:
 
     // Helper functions for accessing settings
 
-    QString settingsString(QAnyStringView key) const;
-    QString settingsString(QAnyStringView key, const QVariant& defaultValue) const;
-    int settingsInt(QAnyStringView key) const;
-    int settingsInt(QAnyStringView key, const QVariant& defaultValue) const;
-    bool settingsBool(QAnyStringView key) const;
-    bool settingsBool(QAnyStringView key, const QVariant& defaultValue) const;
+    QString settingsString(QAnyStringView key, const QVariant& defaultValue = {}) const;
+    int settingsInt(QAnyStringView key, const QVariant& defaultValue = {}) const;
+    bool settingsBool(QAnyStringView key, const QVariant& defaultValue = {}) const;
 };

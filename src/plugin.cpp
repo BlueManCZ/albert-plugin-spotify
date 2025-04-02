@@ -299,29 +299,14 @@ Device Plugin::findDevice(const QVector<Device>& devices, const QString& id)
     return {};
 }
 
-QString Plugin::settingsString(const QAnyStringView key) const
-{
-    return settings()->value(key).toString();
-}
-
 QString Plugin::settingsString(const QAnyStringView key, const QVariant& defaultValue) const
 {
     return settings()->value(key, defaultValue).toString();
 }
 
-int Plugin::settingsInt(const QAnyStringView key) const
-{
-    return settings()->value(key).toInt();
-}
-
 int Plugin::settingsInt(const QAnyStringView key, const QVariant& defaultValue) const
 {
     return settings()->value(key, defaultValue).toInt();
-}
-
-bool Plugin::settingsBool(const QAnyStringView key) const
-{
-    return settings()->value(key).toBool();
 }
 
 bool Plugin::settingsBool(const QAnyStringView key, const QVariant& defaultValue) const
