@@ -3,4 +3,4 @@ project(spotify VERSION 1.2)
 
 find_package(Albert REQUIRED)
 
-albert_plugin(QT Widgets Concurrent Network)
+albert_plugin(QT Widgets Network)

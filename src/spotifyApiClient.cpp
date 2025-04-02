@@ -8,7 +8,6 @@
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QSaveFile>
-#include <QtConcurrentRun>
 #include <albert/albert.h>
 #include <albert/logging.h>
 using namespace albert;
@@ -111,14 +110,15 @@ void SpotifyApiClient::downloadFile(const QString& url, const QString& filePath)
     if (const QFileInfo fileInfo(filePath); fileInfo.exists())
         return;
 
-    fileLock.lockForWrite();
 
     const auto request = QNetworkRequest(url);
     const auto reply = network().get(request);
 
-    connect(reply, &QNetworkReply::finished, this, [reply, filePath]
+    connect(reply, &QNetworkReply::finished, this, [this, reply, filePath]
     {
         reply->deleteLater();
+
+        fileLock.lockForWrite();
 
         if (reply->bytesAvailable())
         {
@@ -127,11 +127,12 @@ void SpotifyApiClient::downloadFile(const QString& url, const QString& filePath)
             file.write(reply->readAll());
             file.commit();
         }
+
+        fileLock.unlock();
     });
 
     waitForSignal(reply, SIGNAL(finished()));
 
-    fileLock.unlock();
 }
 
 QVector<Track> SpotifyApiClient::searchTracks(const QString& query, const int limit)
