@@ -5,7 +5,7 @@
 #include "types/track.h"
 #include <QDateTime>
 #include <QObject>
-#include <QReadWritelock>
+#include <QReadWriteLock>
 class QNetworkRequest;
 
 
